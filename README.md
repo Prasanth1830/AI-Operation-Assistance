@@ -1,6 +1,83 @@
 # AI Operations Assistant
 
-A sophisticated multi-agent system that accepts natural-language tasks, plans steps, calls real third-party APIs, and returns structured answers. Built with LLM-powered reasoning for agent-based task execution.
+A sophisticated multi-agent system that accepts natural-language tasks, plans steps, calls real third-party APIs, and returns structured answers. Built with LLM-powered reasoning (with graceful fallback) for agent-based task execution.
+
+🚀 **Run in one command:**
+```bash
+uvicorn main:app --reload
+```
+
+Then visit: **http://127.0.0.1:8000/docs** for interactive API documentation
+
+---
+
+## Quick Start
+
+### 1. Clone & Setup
+```bash
+cd ai_ops_assistant
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+### 2. Configure Environment Variables
+```bash
+cp .env.example .env
+# Edit .env with your API keys (see Environment Variables section)
+```
+
+### 3. Run the Application
+
+**Option A: REST API Server (FastAPI)**
+```bash
+uvicorn main:app --reload
+# Visit http://127.0.0.1:8000
+# API Docs: http://127.0.0.1:8000/docs
+```
+
+**Option B: Command-Line Interface**
+```bash
+python cli.py "Find top Python repositories and weather in London"
+```
+
+**Option C: Test Components**
+```bash
+python test_components.py
+```
+
+---
+
+## Environment Variables Required
+
+Copy `.env.example` to `.env` and fill in your API keys:
+
+```bash
+# OpenAI API (for LLM-powered planning and verification)
+OPENAI_API_KEY=sk-your-key-here
+OPENAI_MODEL=gpt-3.5-turbo  # or gpt-4, gpt-4-turbo-preview
+
+# GitHub API (for repository searches)
+GITHUB_TOKEN=ghp_your-token-here
+
+# OpenWeatherMap API (for weather data)
+WEATHER_API_KEY=your-api-key-here
+
+# Server Configuration
+SERVER_HOST=127.0.0.1
+SERVER_PORT=8000
+DEBUG=true
+
+# Logging
+LOG_LEVEL=INFO
+```
+
+**How to Get API Keys:**
+- [OpenAI](https://platform.openai.com/api-keys): Create API key
+- [GitHub](https://github.com/settings/tokens): Create personal access token
+- [OpenWeatherMap](https://openweathermap.org/api): Sign up and generate key
+
+---
 
 ## Architecture Overview
 
@@ -8,7 +85,7 @@ A sophisticated multi-agent system that accepts natural-language tasks, plans st
 User Input (Natural Language Task)
           ↓
     ┌─────────────────┐
-    │  PLANNER AGENT  │  (LLM-based task planning)
+    │  PLANNER AGENT  │  (LLM-based or rule-based fallback)
     └─────────┬───────┘
               ↓
          JSON Plan
@@ -22,13 +99,38 @@ User Input (Natural Language Task)
        Execution Results
               ↓
     ┌─────────────────┐
-    │  VERIFIER AGENT │  (Result validation & formatting)
+    │  VERIFIER AGENT │  (Validation & formatting, with LLM fallback)
     └─────────┬───────┘
               ↓
         Final Answer (JSON)
 ```
 
-## Core Capabilities
+### How It Works
+
+1. **Planner**: Converts natural language into structured steps
+   - Tries LLM first for intelligent planning
+   - Falls back to rule-based detection if quota exhausted
+   - Detects programming languages and city names
+
+2. **Executor**: Runs each step and calls appropriate tools
+   - GitHub API for repository searches
+   - Weather API for weather queries
+   - Returns structured results
+
+3. **Verifier**: Validates results and formats output
+   - Checks all steps completed successfully
+   - Formats results using LLM
+   - Falls back to manual formatting if needed
+
+### Fallback System
+
+When OpenAI API quota is exhausted:
+- Planner switches to rule-based keyword detection
+- Still creates valid execution plans
+- System continues working without cost
+- Verifier manually formats results instead of using LLM
+
+---
 
 ✅ **Multi-Agent Architecture**
 - Planner Agent: Converts user input into structured step-by-step plans
@@ -77,128 +179,89 @@ ai_ops_assistant/
 └── README.md               # This file
 ```
 
-## Installation & Setup
+## Integrated APIs
 
-### 1. Prerequisites
-- Python 3.8+
-- pip or conda
-- API keys for:
-  - OpenAI API (for LLM)
-  - GitHub API (for repository search)
-  - OpenWeatherMap API (for weather data)
+✅ **GitHub API** (https://api.github.com)
+- Search repositories by language, stars, forks
+- Get repository metadata (owner, description, URLs)
+- Supports authentication and higher rate limits
 
-### 2. Clone/Setup Project
-```bash
-cd ai_ops_assistant
+✅ **OpenWeatherMap API** (https://api.openweathermap.org)
+- Get current weather conditions
+- Temperature, humidity, wind speed, cloud coverage
+- Support for any major world city
+
+---
+
+## Core Capabilities
+
+✅ **Multi-Agent Architecture**
+- **Planner Agent**: Converts user input into structured step-by-step plans
+- **Executor Agent**: Executes steps in order and calls appropriate tools
+- **Verifier Agent**: Validates completeness and formats final output
+
+✅ **Intelligent Planning with Fallback**
+- LLM-powered reasoning when API available
+- Rule-based fallback when quota exhausted
+- Automatic language and location detection
+
+✅ **Real API Integration**
+- GitHub API for repository searches with authentication
+- Weather API for real-time weather conditions
+- Error handling with graceful degradation
+
+✅ **Multiple Interfaces**
+- **FastAPI REST API**: Full Swagger documentation at `/docs`
+- **Command-Line Interface**: Single command or interactive mode
+- **Structured JSON Output**: For programmatic use
+
+---
+
+## Example Prompts to Test the System
+
+### Example 1: Simple Repository Search
 ```
-
-### 3. Create Virtual Environment
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+"Find the top 5 most-starred Python repositories"
 ```
+**Expected Output:**
+- List of 5 Python repos with star counts
+- Repository URLs and descriptions
 
-### 4. Install Dependencies
-```bash
-pip install -r requirements.txt
+### Example 2: Multiple APIs Combined
 ```
-
-### 5. Configure Environment Variables
-```bash
-# Copy example to .env
-cp .env.example .env
-
-# Edit .env with your API keys
-# Required keys:
-# - OPENAI_API_KEY
-# - GITHUB_TOKEN
-# - WEATHER_API_KEY
+"Find top JavaScript frameworks on GitHub and check weather in Tokyo"
 ```
+**Expected Output:**
+- 5 JavaScript framework repositories
+- Tokyo weather conditions (temperature, humidity, cloudiness)
 
-### Getting API Keys
-
-#### OpenAI API Key
-1. Go to https://platform.openai.com/api-keys
-2. Create new secret key
-3. Copy to .env as `OPENAI_API_KEY`
-
-#### GitHub Token
-1. Go to https://github.com/settings/tokens
-2. Create new personal access token with `repo` and `public_repo` scopes
-3. Copy to .env as `GITHUB_TOKEN`
-
-#### Weather API Key
-1. Go to https://openweathermap.org/api
-2. Sign up and create API key
-3. Copy to .env as `WEATHER_API_KEY`
-
-## Usage
-
-### Option 1: REST API
-
-#### Start the Server
-```bash
-python main.py
+### Example 3: Weather Comparison
 ```
-Server runs on `http://127.0.0.1:8000`
-
-#### Health Check
-```bash
-curl http://127.0.0.1:8000/health
+"Get weather for London, Paris, and New York"
 ```
+**Expected Output:**
+- Temperature for each city
+- Weather conditions and wind speed
+- Comparison summary
 
-#### Process a Task
-```bash
-curl -X POST http://127.0.0.1:8000/process-task \
-  -H "Content-Type: application/json" \
-  -d '{"task": "Find top 5 Python repositories on GitHub and current weather in San Francisco"}'
+### Example 4: Language-Specific Search
 ```
+"Show me the top Go projects with over 5000 stars and weather in Berlin"
+```
+**Expected Output:**
+- Go projects filtered by star count
+- Berlin current weather
 
-#### API Documentation
-Visit `http://127.0.0.1:8000/docs` for interactive Swagger UI
+### Example 5: Complex Multi-Step Task
+```
+"Find top Java repositories and check weather in San Francisco, then tell me which would be good for serverless computing"
+```
+**Expected Output:**
+- Java repositories with descriptions
+- San Francisco weather
+- Analysis and recommendations
 
-### Option 2: Command-Line Interface
-
-#### Single Task
-```bash
-python cli.py "Find the top Python repository with the most stars"
-```
-
-#### Interactive Mode
-```bash
-python cli.py
-# Then type tasks interactively
-```
-
-## Example Tasks
-
-### Example 1: GitHub Repository Search
-```
-Task: Find the top 5 most-starred Python agent frameworks and tell me about them
-```
-**What it does:**
-- Plans GitHub search using language and star criteria
-- Executes three searches for different frameworks
-- Aggregates and verifies results
-- Provides formatted summary
-
-### Example 2: Weather & Repository Combined
-```
-Task: Find the top Node.js repositories for weather applications and tell me the current weather in New York
-```
-**What it does:**
-- Plans both GitHub search and weather API call
-- Executes in parallel-ready steps
-- Combines results into coherent answer
-
-### Example 3: Multiple Locations
-```
-Task: Get current weather for London, Tokyo, and New York
-```
-**What it does:**
-- Plans three weather API calls
-- Executes sequentially
-- Returns formatted weather comparison
+---
 
 ## API Reference
 
@@ -369,23 +432,65 @@ result = tool.execute(
 All configuration is managed via environment variables in `.env`:
 
 ```bash
-# LLM Configuration
+# ==================== LLM Configuration ====================
 LLM_PROVIDER=openai
-OPENAI_API_KEY=sk-...
-OPENAI_MODEL=gpt-4-turbo-preview
+OPENAI_API_KEY=sk-your-actual-key-here
+OPENAI_MODEL=gpt-3.5-turbo  # Options: gpt-3.5-turbo, gpt-4, gpt-4-turbo-preview
 
-# API Keys
-GITHUB_TOKEN=ghp_...
-WEATHER_API_KEY=...
+# ==================== API Keys ====================
+GITHUB_TOKEN=ghp_your-actual-token-here
+WEATHER_API_KEY=your-actual-weather-api-key-here
 
-# Server Configuration
-SERVER_HOST=127.0.0.1
-SERVER_PORT=8000
-DEBUG=true
+# ==================== Server Configuration ====================
+SERVER_HOST=127.0.0.1      # localhost
+SERVER_PORT=8000           # Default port
+DEBUG=true                 # Set to false in production
 
-# Logging
-LOG_LEVEL=INFO
+# ==================== Logging ====================
+LOG_LEVEL=INFO             # Options: DEBUG, INFO, WARNING, ERROR
 ```
+
+### Running the API Server
+
+```bash
+# Using uvicorn (recommended)
+uvicorn main:app --reload
+
+# Or using Python directly
+python main.py
+
+# Visit http://127.0.0.1:8000/docs for Swagger UI
+# Visit http://127.0.0.1:8000/redoc for ReDoc
+```
+
+### Using the REST API
+
+#### Health Check
+```bash
+curl http://127.0.0.1:8000/health
+```
+
+#### Process a Task
+```bash
+curl -X POST http://127.0.0.1:8000/process-task \
+  -H "Content-Type: application/json" \
+  -d '{"task": "Find top 5 Python repositories and weather in London"}'
+```
+
+### Using the CLI
+
+#### Single Task
+```bash
+python cli.py "Find top JavaScript frameworks"
+```
+
+#### Interactive Mode
+```bash
+python cli.py
+# Then type tasks interactively when prompted
+```
+
+---
 
 ## Error Handling
 
@@ -397,18 +502,55 @@ The system implements graceful error handling:
 4. **Tool Errors**: Executor reports failure and continues with other steps
 5. **Format Errors**: Verifier provides raw results if formatting fails
 
-## Performance & Limitations
+## Known Limitations & Tradeoffs
 
-**Current Performance:**
-- Average task execution: 5-15 seconds
-- API rate limits depend on provider accounts
-- Parallel execution ready (sequential in current version)
+### API Limitations
+| Limitation | Details | Workaround |
+|-----------|---------|-----------|
+| **GitHub Search** | Limited to 1000 results max per query | Use more specific filters (language, stars) |
+| **Weather API** | Data updates every 5-10 minutes | Cache results for real-time dashboards |
+| **OpenAI Quota** | May hit rate limits with peak usage | System has built-in fallback to rule-based planning |
+| **Rate Limits** | All APIs have rate limits | Implement request queuing or caching |
 
-**Known Limitations:**
-- GitHub search limited to 1000 results max
-- Weather API limited to 5-minute update frequency
-- OpenAI token limits affect very complex plans
-- No caching layer (can be added)
+### System Limitations
+| Limitation | Impact | Workaround |
+|-----------|--------|-----------|
+| **Sequential Execution** | Steps run one-by-one, not in parallel | Can be enhanced in future versions |
+| **Context Window** | Very large tasks may exceed token limits | Break into multiple smaller tasks |
+| **LLM Dependency** | Cost increases with complex tasks | Rule-based fallback available when quota exhausted |
+| **No Caching** | Repeated queries hit APIs again | Add response caching layer (planned) |
+| **Single City Weather** | Only searches for one city at a time in plan | User can request multiple in single task |
+
+### Tradeoffs Made
+1. **Fallback System**: When OpenAI quota exhausted, system uses rule-based pattern matching instead of LLM
+   - Pros: No cost, continues working
+   - Cons: Less flexible planning than LLM
+
+2. **Sequential Execution**: Steps execute one after another
+   - Pros: Simpler, easier to debug
+   - Cons: Slower than parallel execution
+
+3. **No Caching**: Each query hits the actual API
+   - Pros: Always fresh data
+   - Cons: Higher API costs and slower responses
+
+4. **English-Only Planning**: LLM plans in English
+   - Pros: Simplifies prompt engineering
+   - Cons: May not work as well for non-English inputs
+
+### Performance Characteristics
+- **Typical Task Execution**: 5-15 seconds
+- **API Response Time**: 2-5 seconds per API call
+- **Planning Time**: 2-3 seconds (LLM) or <1 second (fallback)
+- **Network-Dependent**: Overall speed depends on API availability
+
+### Supported Languages for Searches
+Currently auto-detects and searches for:
+- Python, JavaScript, Java, Go, Rust, TypeScript, C++, PHP, Ruby
+
+To add support for more languages, update the `language_keywords` in `agents/planner.py`
+
+---
 
 ## Future Improvements
 
